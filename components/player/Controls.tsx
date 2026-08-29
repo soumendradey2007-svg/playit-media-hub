@@ -108,14 +108,14 @@ export const Controls: React.FC<ControlsProps> = ({
     >
       {/* Interactive Timeline Seekbar */}
       <div
-        className="relative group cursor-pointer w-full py-2 flex items-center"
+        className="relative group cursor-pointer w-full py-2.5 flex items-center"
         onMouseMove={handleTimelineHover}
         onMouseLeave={() => setHoverTime(null)}
         onClick={handleTimelineClick}
       >
         {hoverTime !== null && state.duration > 0 && (
           <div
-            className="absolute -top-8 px-2 py-0.5 bg-black/90 text-white text-[11px] rounded font-mono shadow-lg pointer-events-none -translate-x-1/2 border border-white/20"
+            className="absolute -top-8 px-2 py-0.5 bg-black/90 text-white text-[11px] rounded font-mono shadow-lg pointer-events-none -translate-x-1/2 border border-white/20 z-30"
             style={{ left: hoverX + "px" }}
           >
             {formatTime(hoverTime)}
@@ -123,18 +123,21 @@ export const Controls: React.FC<ControlsProps> = ({
         )}
 
         <div className="relative w-full h-1.5 group-hover:h-2.5 bg-white/20 rounded-full transition-all overflow-hidden">
+          {/* Buffered Track */}
           <div
-            className="absolute top-0 left-0 h-full bg-white/30 rounded-full transition-all"
+            className="absolute top-0 left-0 h-full bg-white/30 rounded-full pointer-events-none"
             style={{ width: bufferedPercent + "%" }}
           />
+          {/* Active Played Orange Track */}
           <div
-            className="absolute top-0 left-0 h-full bg-primary rounded-full"
+            className="absolute top-0 left-0 h-full bg-primary rounded-full pointer-events-none"
             style={{ width: progressPercent + "%" }}
           />
         </div>
 
+        {/* Orange Scrubber Knob (Always positioned accurately at progressPercent) */}
         <div
-          className="absolute w-3.5 h-3.5 bg-primary border-2 border-white rounded-full shadow-lg -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+          className="absolute w-3.5 h-3.5 bg-primary border-2 border-white rounded-full shadow-md -translate-x-1/2 pointer-events-none z-20 transition-transform group-hover:scale-125"
           style={{ left: progressPercent + "%" }}
         />
       </div>

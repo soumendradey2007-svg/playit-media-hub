@@ -45,7 +45,6 @@ export function useMediaPlayer() {
 
   const currentTrack = currentIndex >= 0 && currentIndex < playlist.length ? playlist[currentIndex] : null;
 
-  // 1-Click Play/Pause with Promise Safety
   const togglePlay = useCallback(async () => {
     const media = mediaRef.current;
     if (!media || !currentTrack) return;
@@ -63,31 +62,35 @@ export function useMediaPlayer() {
     }
   }, [currentTrack]);
 
-  // Robust Direct Hardware Seek (Never clamps to 0 or hangs)
+  // Direct Hardware Seek with immediate state update
   const seek = useCallback((targetTime: number) => {
     const media = mediaRef.current;
     if (!media) return;
 
-    const actualDuration = (isFinite(media.duration) && media.duration > 0)
-      ? media.duration
-      : (state.duration > 0 ? state.duration : Infinity);
-
-    const clampedTime = Math.max(0, Math.min(targetTime, actualDuration));
-
-    try {
-      if ('fastSeek' in media && typeof (media as any).fastSeek === 'function') {
-        (media as any).fastSeek(clampedTime);
-      } else {
-        media.currentTime = clampedTime;
-      }
-    } catch {
-      media.currentTime = clampedTime;
+    let actualDur = 0;
+    if (isFinite(media.duration) && media.duration > 0) {
+      actualDur = media.duration;
+    } else if (media.seekable && media.seekable.length > 0) {
+      actualDur = media.seekable.end(media.seekable.length - 1);
+    } else if (state.duration > 0) {
+      actualDur = state.duration;
     }
 
-    setState((s) => ({ ...s, currentTime: clampedTime }));
+    const clampedTime = Math.max(0, actualDur > 0 ? Math.min(targetTime, actualDur) : targetTime);
+
+    try {
+      media.currentTime = clampedTime;
+    } catch (e) {
+      console.warn("Seek error:", e);
+    }
+
+    setState((s) => ({
+      ...s,
+      currentTime: clampedTime,
+      duration: actualDur > 0 ? actualDur : s.duration,
+    }));
   }, [state.duration]);
 
-  // Seek relative by +/- seconds directly from hardware timestamp
   const seekRelative = useCallback((seconds: number) => {
     const media = mediaRef.current;
     if (!media) return;
@@ -95,11 +98,19 @@ export function useMediaPlayer() {
     seek(current + seconds);
   }, [seek, state.currentTime]);
 
-  // Seek by ratio (0.0 to 1.0 from timeline click)
   const seekByRatio = useCallback((ratio: number) => {
     const media = mediaRef.current;
     if (!media) return;
-    const dur = (isFinite(media.duration) && media.duration > 0) ? media.duration : state.duration;
+
+    let dur = 0;
+    if (isFinite(media.duration) && media.duration > 0) {
+      dur = media.duration;
+    } else if (media.seekable && media.seekable.length > 0) {
+      dur = media.seekable.end(media.seekable.length - 1);
+    } else if (state.duration > 0) {
+      dur = state.duration;
+    }
+
     if (dur > 0) {
       seek(ratio * dur);
     }
@@ -299,7 +310,7 @@ export function useMediaPlayer() {
     });
   }, []);
 
-  // Continuous Video Event Synchronization
+  // Continuous Synchronization
   useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
@@ -309,7 +320,14 @@ export function useMediaPlayer() {
     
     const syncTimeAndDuration = () => {
       const cur = media.currentTime || 0;
-      const dur = (isFinite(media.duration) && media.duration > 0) ? media.duration : 0;
+      let dur = 0;
+      if (isFinite(media.duration) && media.duration > 0) {
+        dur = media.duration;
+      } else if (media.seekable && media.seekable.length > 0) {
+        const end = media.seekable.end(media.seekable.length - 1);
+        if (isFinite(end) && end > 0) dur = end;
+      }
+
       setState((s) => ({
         ...s,
         currentTime: cur,
