@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Light Mode (Sahara Warm Linen) */
+:root {
+  --color-surface: #fdfaf7;
+  --color-surface-dim: #f8f3ee;
+  --color-surface-bright: #ffffff;
+  --color-outline: #e5e0db;
+  --color-primary: #c2652a;
+  --color-primary-hover: #a85421;
+  --color-on-primary: #ffffff;
+  --color-tertiary: #8c3c3c;
+  --color-text-header: #1a1a1a;
+  --color-text-body: #4a4a4a;
+  --color-text-muted: #8c8c8c;
+  --color-active-nav-bg: #f2ede8;
+  --color-hover-overlay: rgba(194, 101, 42, 0.05);
+  --color-success: #2e7d32;
+  --radius-standard: 8px;
+  --radius-large: 12px;
+  --radius-full: 50%;
+  --card-shadow: 0 2px 16px rgba(58, 48, 42, 0.04);
+}
+/* Dark Mode (Sahara Warm Obsidian) */
+.dark {
+  --color-surface: #141210;
+  --color-surface-dim: #1c1917;
+  --color-surface-bright: #25211e;
+  --color-outline: #38322c;
+  --color-primary: #d97736;
+  --color-primary-hover: #ea8a4b;
+  --color-on-primary: #ffffff;
+  --color-tertiary: #a34e4e;
+  --color-text-header: #fdfaf7;
+  --color-text-body: #d8d0c8;
+  --color-text-muted: #8c837b;
+  --color-active-nav-bg: #2c2520;
+  --color-hover-overlay: rgba(217, 119, 54, 0.08);
+  --color-success: #4caf50;
+  --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text-body);
+  font-family: var(--font-manrope), sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface-dim); }
+::-webkit-scrollbar-thumb { background: #554e47; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+input[type="range"] { accent-color: var(--color-primary); }
+.sahara-card {
+  background-color: var(--color-surface-bright);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-large);
+  box-shadow: var(--card-shadow);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
