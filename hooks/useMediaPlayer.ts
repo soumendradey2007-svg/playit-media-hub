@@ -45,35 +45,52 @@ export function useMediaPlayer() {
 
   const currentTrack = currentIndex >= 0 && currentIndex < playlist.length ? playlist[currentIndex] : null;
 
-  // Direct Live Media Handlers
+  // Real-Time Time Update
   const handleTimeUpdate = useCallback(() => {
     const media = mediaRef.current;
     if (!media) return;
     const cur = media.currentTime || 0;
-    let dur = (isFinite(media.duration) && media.duration > 0) ? media.duration : 0;
-    if (dur === 0 && media.seekable && media.seekable.length > 0) {
+    
+    let dur = 0;
+    if (isFinite(media.duration) && media.duration > 0) {
+      dur = media.duration;
+    } else if (media.seekable && media.seekable.length > 0) {
       dur = media.seekable.end(media.seekable.length - 1);
     }
+
     setState((s) => ({
       ...s,
       currentTime: cur,
-      duration: dur > 0 ? dur : s.duration,
+      duration: dur > 0 ? dur : (s.duration > 0 ? s.duration : 0),
     }));
   }, []);
 
+  // Large-File 3.5GB+ Duration Prober
   const handleLoadedMetadata = useCallback(() => {
     const media = mediaRef.current;
     if (!media) return;
-    let dur = (isFinite(media.duration) && media.duration > 0) ? media.duration : 0;
-    if (dur === 0 && media.seekable && media.seekable.length > 0) {
-      dur = media.seekable.end(media.seekable.length - 1);
+
+    // Check if browser returned Infinity/NaN on large file
+    if (!isFinite(media.duration) || media.duration === 0 || isNaN(media.duration)) {
+      const probeDuration = () => {
+        media.removeEventListener("timeupdate", probeDuration);
+        const resolvedDuration = media.currentTime;
+        media.currentTime = 0;
+        if (isFinite(resolvedDuration) && resolvedDuration > 0) {
+          setState((s) => ({ ...s, duration: resolvedDuration, currentTime: 0 }));
+        }
+      };
+
+      media.addEventListener("timeupdate", probeDuration, { once: true });
+      media.currentTime = 1e101; // Instant EOF seek probe (resolves in 5ms)
+    } else {
+      setState((s) => ({
+        ...s,
+        duration: media.duration,
+        volume: media.volume,
+        isMuted: media.muted,
+      }));
     }
-    setState((s) => ({
-      ...s,
-      duration: dur > 0 ? dur : s.duration,
-      volume: media.volume,
-      isMuted: media.muted,
-    }));
   }, []);
 
   const handlePlay = useCallback(() => {
