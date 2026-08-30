@@ -25,6 +25,12 @@ interface PlayerViewportProps {
   onPlayPrevious: () => void;
   onToggleLoop: () => void;
   onToggleShuffle: () => void;
+  onTimeUpdate: () => void;
+  onLoadedMetadata: () => void;
+  onPlay: () => void;
+  onPause: () => void;
+  onEnded: () => void;
+  onProgress: () => void;
 }
 
 export const PlayerViewport: React.FC<PlayerViewportProps> = ({
@@ -46,6 +52,12 @@ export const PlayerViewport: React.FC<PlayerViewportProps> = ({
   onPlayPrevious,
   onToggleLoop,
   onToggleShuffle,
+  onTimeUpdate,
+  onLoadedMetadata,
+  onPlay,
+  onPause,
+  onEnded,
+  onProgress,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showControls, setShowControls] = useState(true);
@@ -107,6 +119,15 @@ export const PlayerViewport: React.FC<PlayerViewportProps> = ({
               src={currentTrack.url}
               className={`w-full h-full object-contain ${isFullscreen ? "max-h-screen" : ""}`}
               playsInline
+              onTimeUpdate={onTimeUpdate}
+              onDurationChange={onTimeUpdate}
+              onLoadedMetadata={onLoadedMetadata}
+              onLoadedData={onTimeUpdate}
+              onCanPlay={onTimeUpdate}
+              onPlay={onPlay}
+              onPause={onPause}
+              onEnded={onEnded}
+              onProgress={onProgress}
             />
 
             {currentTrack.type === "audio" && (

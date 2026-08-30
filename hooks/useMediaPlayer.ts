@@ -45,6 +45,79 @@ export function useMediaPlayer() {
 
   const currentTrack = currentIndex >= 0 && currentIndex < playlist.length ? playlist[currentIndex] : null;
 
+  // Direct Live Media Handlers
+  const handleTimeUpdate = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    const cur = media.currentTime || 0;
+    let dur = (isFinite(media.duration) && media.duration > 0) ? media.duration : 0;
+    if (dur === 0 && media.seekable && media.seekable.length > 0) {
+      dur = media.seekable.end(media.seekable.length - 1);
+    }
+    setState((s) => ({
+      ...s,
+      currentTime: cur,
+      duration: dur > 0 ? dur : s.duration,
+    }));
+  }, []);
+
+  const handleLoadedMetadata = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    let dur = (isFinite(media.duration) && media.duration > 0) ? media.duration : 0;
+    if (dur === 0 && media.seekable && media.seekable.length > 0) {
+      dur = media.seekable.end(media.seekable.length - 1);
+    }
+    setState((s) => ({
+      ...s,
+      duration: dur > 0 ? dur : s.duration,
+      volume: media.volume,
+      isMuted: media.muted,
+    }));
+  }, []);
+
+  const handlePlay = useCallback(() => {
+    setState((s) => ({ ...s, isPlaying: true }));
+  }, []);
+
+  const handlePause = useCallback(() => {
+    setState((s) => ({ ...s, isPlaying: false }));
+  }, []);
+
+  const handleProgress = useCallback(() => {
+    const media = mediaRef.current;
+    if (media && media.buffered.length > 0) {
+      setState((s) => ({ ...s, buffered: media.buffered.end(media.buffered.length - 1) }));
+    }
+  }, []);
+
+  const playNext = useCallback(() => {
+    if (playlist.length === 0) return;
+    const nextIdx = state.isShuffle
+      ? Math.floor(Math.random() * playlist.length)
+      : (currentIndex + 1) % playlist.length;
+    setCurrentIndex(nextIdx);
+  }, [playlist.length, state.isShuffle, currentIndex]);
+
+  const playPrevious = useCallback(() => {
+    if (playlist.length === 0) return;
+    const prevIdx = (currentIndex - 1 + playlist.length) % playlist.length;
+    setCurrentIndex(prevIdx);
+  }, [playlist.length, currentIndex]);
+
+  const handleEnded = useCallback(() => {
+    if (state.loop === "one") {
+      if (mediaRef.current) {
+        mediaRef.current.currentTime = 0;
+        mediaRef.current.play().catch(() => {});
+      }
+    } else if (state.loop === "all" || currentIndex < playlist.length - 1) {
+      playNext();
+    } else {
+      setState((s) => ({ ...s, isPlaying: false }));
+    }
+  }, [state.loop, currentIndex, playlist.length, playNext]);
+
   const togglePlay = useCallback(async () => {
     const media = mediaRef.current;
     if (!media || !currentTrack) return;
@@ -62,7 +135,6 @@ export function useMediaPlayer() {
     }
   }, [currentTrack]);
 
-  // Direct Hardware Seek with immediate state update
   const seek = useCallback((targetTime: number) => {
     const media = mediaRef.current;
     if (!media) return;
@@ -178,20 +250,6 @@ export function useMediaPlayer() {
     link.href = canvas.toDataURL("image/png");
     link.click();
   }, [currentTrack]);
-
-  const playNext = useCallback(() => {
-    if (playlist.length === 0) return;
-    const nextIdx = state.isShuffle
-      ? Math.floor(Math.random() * playlist.length)
-      : (currentIndex + 1) % playlist.length;
-    setCurrentIndex(nextIdx);
-  }, [playlist.length, state.isShuffle, currentIndex]);
-
-  const playPrevious = useCallback(() => {
-    if (playlist.length === 0) return;
-    const prevIdx = (currentIndex - 1 + playlist.length) % playlist.length;
-    setCurrentIndex(prevIdx);
-  }, [playlist.length, currentIndex]);
 
   const toggleFavorite = useCallback((id: string) => {
     setPlaylist((prev) =>
@@ -310,77 +368,6 @@ export function useMediaPlayer() {
     });
   }, []);
 
-  // Continuous Synchronization
-  useEffect(() => {
-    const media = mediaRef.current;
-    if (!media) return;
-
-    const onPlay = () => setState((s) => ({ ...s, isPlaying: true }));
-    const onPause = () => setState((s) => ({ ...s, isPlaying: false }));
-    
-    const syncTimeAndDuration = () => {
-      const cur = media.currentTime || 0;
-      let dur = 0;
-      if (isFinite(media.duration) && media.duration > 0) {
-        dur = media.duration;
-      } else if (media.seekable && media.seekable.length > 0) {
-        const end = media.seekable.end(media.seekable.length - 1);
-        if (isFinite(end) && end > 0) dur = end;
-      }
-
-      setState((s) => ({
-        ...s,
-        currentTime: cur,
-        duration: dur > 0 ? dur : s.duration,
-      }));
-    };
-
-    const onProgress = () => {
-      if (media.buffered.length > 0) {
-        setState((s) => ({ ...s, buffered: media.buffered.end(media.buffered.length - 1) }));
-      }
-    };
-
-    const onEnded = () => {
-      if (state.loop === "one") {
-        media.currentTime = 0;
-        media.play().catch(() => {});
-      } else if (state.loop === "all" || currentIndex < playlist.length - 1) {
-        playNext();
-      } else {
-        setState((s) => ({ ...s, isPlaying: false }));
-      }
-    };
-
-    media.addEventListener("play", onPlay);
-    media.addEventListener("pause", onPause);
-    media.addEventListener("timeupdate", syncTimeAndDuration);
-    media.addEventListener("durationchange", syncTimeAndDuration);
-    media.addEventListener("loadedmetadata", syncTimeAndDuration);
-    media.addEventListener("loadeddata", syncTimeAndDuration);
-    media.addEventListener("canplay", syncTimeAndDuration);
-    media.addEventListener("seeking", syncTimeAndDuration);
-    media.addEventListener("seeked", syncTimeAndDuration);
-    media.addEventListener("progress", onProgress);
-    media.addEventListener("ended", onEnded);
-
-    syncTimeAndDuration();
-
-    return () => {
-      media.removeEventListener("play", onPlay);
-      media.removeEventListener("pause", onPause);
-      media.removeEventListener("timeupdate", syncTimeAndDuration);
-      media.removeEventListener("durationchange", syncTimeAndDuration);
-      media.removeEventListener("loadedmetadata", syncTimeAndDuration);
-      media.removeEventListener("loadeddata", syncTimeAndDuration);
-      media.removeEventListener("canplay", syncTimeAndDuration);
-      media.removeEventListener("seeking", syncTimeAndDuration);
-      media.removeEventListener("seeked", syncTimeAndDuration);
-      media.removeEventListener("progress", onProgress);
-      media.removeEventListener("ended", onEnded);
-    };
-  }, [currentIndex, currentTrack, playlist.length, state.loop, playNext]);
-
   return {
     mediaRef,
     analyserNode: analyserRef.current,
@@ -411,5 +398,11 @@ export function useMediaPlayer() {
     playPrevious,
     toggleFavorite,
     addFilesToIngest,
+    handleTimeUpdate,
+    handleLoadedMetadata,
+    handlePlay,
+    handlePause,
+    handleEnded,
+    handleProgress,
   };
 }

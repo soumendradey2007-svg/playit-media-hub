@@ -167,6 +167,12 @@ export default function Home() {
                   onToggleShuffle={() => {
                     player.setState((s) => ({ ...s, isShuffle: !s.isShuffle }));
                   }}
+                  onTimeUpdate={player.handleTimeUpdate}
+                  onLoadedMetadata={player.handleLoadedMetadata}
+                  onPlay={player.handlePlay}
+                  onPause={player.handlePause}
+                  onEnded={player.handleEnded}
+                  onProgress={player.handleProgress}
                 />
               </div>
 
